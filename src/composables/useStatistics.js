@@ -3,9 +3,20 @@ import state, {
   totalPagesAcrossAll,
   totalReadAcrossAll,
   overallPercent,
-  dailyPlan
+  pagesRemaining
 } from '@/stores/booksStore.js'
 import { todayKey, addDays, parseKey, diffInDays } from '@/utils/date.js'
+
+/** Единая дата цели для глобального дневного плана (день включительно). */
+const GLOBAL_READING_DEADLINE = '2026-12-31'
+const MS_PER_DAY = 86400000
+
+function globalReadingDaysLeftInclusive() {
+  const today = parseKey(todayKey())
+  const target = parseKey(GLOBAL_READING_DEADLINE)
+  const days = Math.round((target - today) / MS_PER_DAY) + 1
+  return Math.max(1, days)
+}
 
 /**
  * Aggregates per-day pages read across all books.
@@ -79,19 +90,28 @@ export function useStatistics() {
     return best
   })
 
-  /** Sum of recommended pages today across reading books that have a deadline. */
+  /**
+   * Глобальный дневной план: сумма оставшихся страниц по всем незавершённым книгам,
+   * делённая на число календарных дней от сегодня до GLOBAL_READING_DEADLINE включительно.
+   */
   const todayPlanTotal = computed(() => {
-    let total = 0
+    let pagesLeft = 0
     let counted = 0
     for (const b of state.books) {
-      if (b.status !== 'reading') continue
-      const plan = dailyPlan(b)
-      if (plan != null) {
-        total += plan
-        counted += 1
-      }
+      if (b.status === 'finished') continue
+      const rem = pagesRemaining(b)
+      pagesLeft += rem
+      if (rem > 0) counted += 1
     }
-    return { total, counted }
+    if (pagesLeft <= 0) {
+      return { total: 0, counted: 0, daysLeft: globalReadingDaysLeftInclusive() }
+    }
+    const daysLeft = globalReadingDaysLeftInclusive()
+    return {
+      total: Math.ceil(pagesLeft / daysLeft),
+      counted,
+      daysLeft
+    }
   })
 
   /** Nearest deadline among reading books (returns Date or null). */
