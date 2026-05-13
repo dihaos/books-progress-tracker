@@ -63,11 +63,26 @@ function hydrate() {
 function normalizeBook(raw) {
   if (!raw || typeof raw !== 'object') return null
   const totalPages = Math.max(1, Number(raw.totalPages) || 1)
-  const startPage = clampPage(Number(raw.startPage) || 0, totalPages)
   const currentPage = clampPage(
-    raw.currentPage != null ? Number(raw.currentPage) : startPage,
+    raw.currentPage != null ? Number(raw.currentPage) : 0,
     totalPages
   )
+  // startPage = baseline when book entered the tracker. If absent in raw data
+  // (seed JSON, legacy export), default to currentPage so daily deltas count
+  // only what was actually read inside the tracker, not pre-tracker progress.
+  let startPage = clampPage(
+    raw.startPage != null ? Number(raw.startPage) : currentPage,
+    totalPages
+  )
+  const history =
+    raw.history && typeof raw.history === 'object' && !Array.isArray(raw.history)
+      ? { ...raw.history }
+      : {}
+  // Legacy migration: seed-style data persisted with startPage=0 and no history
+  // would otherwise attribute all "already read" pages to the first edit day.
+  if (startPage === 0 && currentPage > 0 && Object.keys(history).length === 0) {
+    startPage = currentPage
+  }
   return {
     id: String(raw.id || uid()),
     title: String(raw.title || 'Без названия'),
@@ -80,10 +95,7 @@ function normalizeBook(raw) {
     deadline: raw.deadline || null,
     status: raw.status === 'finished' ? 'finished' : 'reading',
     finishedAt: raw.finishedAt || null,
-    history:
-      raw.history && typeof raw.history === 'object' && !Array.isArray(raw.history)
-        ? { ...raw.history }
-        : {}
+    history
   }
 }
 
@@ -215,8 +227,14 @@ export function setCurrentPage(id, rawPage) {
   const book = state.books.find((b) => b.id === id)
   if (!book) return false
   const page = clampPage(Math.floor(Number(rawPage) || 0), book.totalPages)
-  book.currentPage = page
   const today = todayKey()
+  // First write to this book's history: lift the baseline so today's delta
+  // counts only the freshly read pages, not the gap between startPage (often 0
+  // for legacy/seed data) and the bookmark we already had before today.
+  if (Object.keys(book.history).length === 0 && book.currentPage > book.startPage) {
+    book.startPage = book.currentPage
+  }
+  book.currentPage = page
   book.history[today] = page
 
   if (page >= book.totalPages) {
@@ -236,6 +254,11 @@ export function markBookFinished(id) {
   const book = state.books.find((b) => b.id === id)
   if (!book) return false
   const today = todayKey()
+  // Same baseline lift as in setCurrentPage: don't dump untracked progress
+  // into today's stats when finishing a book that had no history yet.
+  if (Object.keys(book.history).length === 0 && book.currentPage > book.startPage) {
+    book.startPage = book.currentPage
+  }
   book.currentPage = book.totalPages
   book.history[today] = book.totalPages
   book.status = 'finished'
