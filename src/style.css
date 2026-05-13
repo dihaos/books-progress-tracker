@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+  --bg: #fbf8f1;
+  --bg-elev: #fefcf6;
+  --fg: #1f1c15;
+  --fg-muted: #6c6149;
+  --border: rgba(31, 28, 21, 0.10);
+  --border-strong: rgba(31, 28, 21, 0.18);
+  --accent: #ad8540;
+  --accent-soft: rgba(173, 133, 64, 0.14);
+}
+
+.dark {
+  --bg: #13110c;
+  --bg-elev: #1f1c15;
+  --fg: #f5ecd9;
+  --fg-muted: #b9aa86;
+  --border: rgba(245, 236, 217, 0.08);
+  --border-strong: rgba(245, 236, 217, 0.14);
+  --accent: #dcc28a;
+  --accent-soft: rgba(220, 194, 138, 0.14);
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+@layer components {
+  .glass {
+    @apply bg-ink-50/70 dark:bg-ink-800/60 backdrop-blur-xl border border-ink-200/60 dark:border-ink-700/60;
+  }
+
+  .glass-strong {
+    @apply bg-ink-50/90 dark:bg-ink-800/85 backdrop-blur-2xl border border-ink-200/60 dark:border-ink-700/60;
+  }
+
+  .card {
+    @apply rounded-2xl bg-ink-50 dark:bg-ink-800 border border-ink-200/60 dark:border-ink-700/60 shadow-card;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium
+           transition-all duration-200 active:scale-[0.98] focus:outline-none
+           focus-visible:ring-2 focus-visible:ring-sand-400/60 focus-visible:ring-offset-2
+           focus-visible:ring-offset-ink-50 dark:focus-visible:ring-offset-ink-900 disabled:opacity-50
+           disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-cocoa-700 text-ink-50 hover:bg-cocoa-600 dark:bg-sand-200 dark:text-ink-900 dark:hover:bg-sand-100;
+  }
+
+  .btn-ghost {
+    @apply btn text-ink-700 dark:text-ink-100 hover:bg-ink-200/60 dark:hover:bg-ink-700/50;
+  }
+
+  .btn-soft {
+    @apply btn bg-ink-100 text-ink-800 hover:bg-ink-200 dark:bg-ink-700 dark:text-ink-100 dark:hover:bg-ink-600;
+  }
+
+  .btn-accent {
+    @apply btn bg-sand-600 text-ink-50 hover:bg-sand-500 shadow-glow dark:bg-sand-500 dark:hover:bg-sand-400;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
+           bg-ink-100 text-ink-700 dark:bg-ink-700/70 dark:text-ink-100;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-ink-200/80 dark:border-ink-700/70 bg-ink-50 dark:bg-ink-800
+           px-3.5 py-2.5 text-sm text-ink-900 dark:text-ink-50 placeholder:text-ink-400
+           focus:outline-none focus:ring-2 focus:ring-sand-400/40 focus:border-sand-400/60
+           transition-shadow;
+  }
+
+  .label {
+    @apply text-xs font-medium uppercase tracking-wider text-ink-400;
+  }
+
+  .divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-ink-300/60 dark:via-ink-600/60 to-transparent;
+  }
+}
+
+@layer utilities {
+  .scroll-soft {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(50, 40, 20, 0.22) transparent;
+  }
+  .scroll-soft::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-soft::-webkit-scrollbar-thumb {
+    background: rgba(50, 40, 20, 0.18);
+    border-radius: 999px;
+  }
+  .dark .scroll-soft::-webkit-scrollbar-thumb {
+    background: rgba(245, 236, 217, 0.18);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, black 80%, transparent);
+  }
+}
+
+/* Confetti pieces */
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  top: -20px;
+  will-change: transform, opacity;
+  animation: confetti-fall var(--duration, 2.6s) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--x, 0), 110vh, 0) rotate(var(--r, 540deg));
+    opacity: 0.9;
+  }
+}
+
+@keyframes progressShine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+.progress-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 240, 210, 0.35),
+    transparent
+  );
+  animation: progressShine 2.4s ease-in-out infinite;
+}
