@@ -1,16 +1,16 @@
 <script setup>
-import { computed, ref, reactive, onBeforeUnmount } from 'vue'
-import { useBooks } from '@/composables/useBooks.js'
-import { roundPct } from '@/utils/format.js'
-import AppIcon from './AppIcon.vue'
+import { computed, ref, reactive, onBeforeUnmount } from "vue";
+import { useBooks } from "@/composables/useBooks.js";
+import { roundPct } from "@/utils/format.js";
+import AppIcon from "./AppIcon.vue";
 
 const props = defineProps({
-  showLabels: { type: Boolean, default: true }
-})
+  showLabels: { type: Boolean, default: true },
+});
 
-const emit = defineEmits(['select-book'])
+const emit = defineEmits(["select-book"]);
 
-const barWrapperRef = ref(null)
+const barWrapperRef = ref(null);
 
 const {
   books,
@@ -18,11 +18,11 @@ const {
   totalReadAcrossAll,
   overallPercent,
   finishedCount,
-  readingCount
-} = useBooks()
+  readingCount,
+} = useBooks();
 
 const segments = computed(() => {
-  const total = totalPagesAcrossAll.value || 1
+  const total = totalPagesAcrossAll.value || 1;
   return books.value.map((b) => ({
     id: b.id,
     title: b.title,
@@ -31,56 +31,61 @@ const segments = computed(() => {
     currentPage: b.currentPage,
     percent: b.progress.percent,
     isComplete: b.progress.isComplete,
-    width: (b.totalPages / total) * 100
-  }))
-})
+    width: (b.totalPages / total) * 100,
+  }));
+});
 
-const tooltip = reactive({ visible: false, x: 0, y: 0, content: null })
-const hovered = ref(null)
-let hideTimer = null
+const tooltip = reactive({ visible: false, x: 0, y: 0, content: null });
+const hovered = ref(null);
+let hideTimer = null;
 
 function setTooltipPosition(buttonEl) {
-  if (!barWrapperRef.value) return
-  const containerRect = barWrapperRef.value.getBoundingClientRect()
-  const rect = buttonEl.getBoundingClientRect()
-  tooltip.x = rect.left - containerRect.left + rect.width / 2
-  tooltip.y = rect.top - containerRect.top
+  if (!barWrapperRef.value) return;
+  const containerRect = barWrapperRef.value.getBoundingClientRect();
+  const rect = buttonEl.getBoundingClientRect();
+  tooltip.x = rect.left - containerRect.left + rect.width / 2;
+  tooltip.y = rect.top - containerRect.top;
 }
 
 function showTooltip(event, segment) {
-  hovered.value = segment.id
-  tooltip.content = segment
-  setTooltipPosition(event.currentTarget)
-  tooltip.visible = true
-  if (hideTimer) clearTimeout(hideTimer)
+  hovered.value = segment.id;
+  tooltip.content = segment;
+  setTooltipPosition(event.currentTarget);
+  tooltip.visible = true;
+  if (hideTimer) clearTimeout(hideTimer);
 }
 
 function moveTooltip(event) {
-  if (!tooltip.visible) return
-  setTooltipPosition(event.currentTarget)
+  if (!tooltip.visible) return;
+  setTooltipPosition(event.currentTarget);
 }
 
 function hideTooltip() {
   hideTimer = setTimeout(() => {
-    tooltip.visible = false
-    hovered.value = null
-  }, 100)
+    tooltip.visible = false;
+    hovered.value = null;
+  }, 100);
 }
 
 onBeforeUnmount(() => {
-  if (hideTimer) clearTimeout(hideTimer)
-})
+  if (hideTimer) clearTimeout(hideTimer);
+});
 
 function handleClick(segment) {
-  emit('select-book', segment.id)
+  emit("select-book", segment.id);
 }
 </script>
 
 <template>
-  <section id="progress" class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+  <section
+    id="progress"
+    class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8"
+  >
     <div class="flex items-baseline justify-between mb-4">
       <div>
-        <h2 class="font-display text-lg sm:text-xl font-semibold tracking-tight">
+        <h2
+          class="font-display text-lg sm:text-xl font-semibold tracking-tight"
+        >
           Добавленные книги
         </h2>
         <p class="mt-0.5 text-sm text-ink-500 dark:text-ink-300">
@@ -100,14 +105,20 @@ function handleClick(segment) {
     </div>
 
     <div class="card p-4 sm:p-5">
-      <div v-if="!segments.length" class="text-sm text-ink-500 dark:text-ink-300 py-4 text-center">
+      <div
+        v-if="!segments.length"
+        class="text-sm text-ink-500 dark:text-ink-300 py-4 text-center"
+      >
         Пока ни одной книги. Добавь первую — и она появится на этой полке.
       </div>
 
       <template v-else>
         <div class="flex items-baseline justify-between mb-3 px-0.5">
           <div class="text-sm font-medium">
-            {{ totalReadAcrossAll }} <span class="text-ink-400">/ {{ totalPagesAcrossAll }} страниц</span>
+            {{ totalReadAcrossAll }}
+            <span class="text-ink-400"
+              >/ {{ totalPagesAcrossAll }} страниц</span
+            >
           </div>
           <div class="text-sm font-semibold tabular-nums">
             {{ Math.round(overallPercent) }}%
@@ -116,8 +127,7 @@ function handleClick(segment) {
 
         <div ref="barWrapperRef" class="relative">
           <div
-            class="relative h-9 sm:h-10 w-full rounded-xl overflow-hidden flex
-                   bg-ink-100/80 dark:bg-ink-700/40 ring-1 ring-inset ring-ink-200/60 dark:ring-ink-700/60"
+            class="relative h-9 sm:h-10 w-full rounded-xl overflow-hidden flex bg-ink-100/80 dark:bg-ink-700/40 ring-1 ring-inset ring-ink-200/60 dark:ring-ink-700/60"
           >
             <button
               v-for="(s, i) in segments"
@@ -133,12 +143,13 @@ function handleClick(segment) {
               @blur="hideTooltip"
               @click="handleClick(s)"
             >
-              <span class="absolute inset-0 bg-transparent group-hover:bg-ink-900/5 dark:group-hover:bg-ink-50/5 transition-colors" />
               <span
-                class="absolute inset-y-0 left-0 transition-[width] duration-700 ease-out
-                       bg-gradient-to-r from-sand-500 to-cocoa-600"
+                class="absolute inset-0 bg-transparent group-hover:bg-ink-900/5 dark:group-hover:bg-ink-50/5 transition-colors"
+              />
+              <span
+                class="absolute inset-y-0 left-0 transition-[width] duration-700 ease-out bg-gradient-to-r from-sand-500 to-cocoa-600"
                 :class="{
-                  'from-sand-400 to-sand-300': s.isComplete && s.percent >= 100
+                  'from-sand-400 to-sand-300': s.isComplete && s.percent >= 100,
                 }"
                 :style="{ width: s.percent + '%' }"
               />
@@ -175,46 +186,30 @@ function handleClick(segment) {
                   <span class="font-semibold">{{ tooltip.content.title }}</span>
                 </div>
                 <div class="mt-0.5 text-ink-500 dark:text-ink-300">
-                  {{ tooltip.content.currentPage }} / {{ tooltip.content.totalPages }} стр. ·
+                  {{ tooltip.content.currentPage }} /
+                  {{ tooltip.content.totalPages }} стр. ·
                   <span class="font-medium text-sand-700 dark:text-sand-300">
-                    {{ roundPct(tooltip.content.currentPage, tooltip.content.totalPages) }}%
+                    {{
+                      roundPct(
+                        tooltip.content.currentPage,
+                        tooltip.content.totalPages,
+                      )
+                    }}%
                   </span>
                 </div>
               </div>
               <div
-                class="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 rotate-45
-                       bg-ink-50/95 dark:bg-ink-800/95 border-r border-b border-ink-200/70 dark:border-ink-700/70"
+                class="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 rotate-45 bg-ink-50/95 dark:bg-ink-800/95 border-r border-b border-ink-200/70 dark:border-ink-700/70"
               />
             </div>
           </Transition>
         </div>
 
-        <div
-          v-if="props.showLabels"
-          class="mt-3 flex w-full overflow-x-auto scroll-soft mask-fade-r sm:mask-none"
-        >
-          <div class="flex w-full">
-            <div
-              v-for="s in segments"
-              :key="`label-${s.id}`"
-              class="shrink-0 sm:flex-1 px-1"
-              :style="{ minWidth: '72px', flexBasis: s.width + '%' }"
-            >
-              <button
-                class="block w-full text-[10px] sm:text-[11px] truncate text-left text-ink-400 hover:text-ink-700 dark:hover:text-ink-100 transition-colors"
-                :title="s.title"
-                @click="handleClick(s)"
-              >
-                {{ s.title }}
-              </button>
-            </div>
-          </div>
-        </div>
-
         <div class="mt-4 flex items-center gap-3 text-[11px] text-ink-400">
           <div class="flex items-center gap-1.5">
             <AppIcon name="info" :size="12" />
-            Наведи на сегмент — увидишь сводку. Нажми — откроется детальный список.
+            Наведи на сегмент — увидишь сводку. Нажми — откроется детальный
+            список.
           </div>
         </div>
       </template>

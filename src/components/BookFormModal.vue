@@ -2,7 +2,6 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useBooks } from '@/composables/useBooks.js'
 import { useToast } from '@/composables/useToast.js'
-import { todayKey } from '@/utils/date.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -24,7 +23,6 @@ const form = ref({
   author: '',
   totalPages: '',
   currentPage: '',
-  deadline: ''
 })
 
 function resetForm() {
@@ -34,16 +32,14 @@ function resetForm() {
       title: b.title,
       author: b.author || '',
       totalPages: String(b.totalPages),
-      currentPage: String(b.currentPage),
-      deadline: b.deadline || ''
+      currentPage: String(b.currentPage)
     }
   } else {
     form.value = {
       title: '',
       author: '',
       totalPages: '',
-      currentPage: '0',
-      deadline: ''
+      currentPage: '0'
     }
   }
 }
@@ -85,11 +81,6 @@ function validate() {
   if (!total || total < 1) e.totalPages = 'Нужно положительное число'
   if (current < 0) e.currentPage = 'Не может быть отрицательным'
   if (total && current > total) e.currentPage = `Не больше ${total}`
-  if (form.value.deadline) {
-    if (form.value.deadline < todayKey() && !isEdit.value) {
-      e.deadline = 'Дедлайн уже прошёл'
-    }
-  }
   errors.value = e
   return Object.keys(e).length === 0
 }
@@ -101,16 +92,14 @@ function submit() {
     title: form.value.title.trim(),
     author: form.value.author.trim(),
     totalPages: Number(form.value.totalPages),
-    currentPage: Number(form.value.currentPage || 0),
-    deadline: form.value.deadline || null
+    currentPage: Number(form.value.currentPage || 0)
   }
 
   if (isEdit.value && editingBook.value) {
     updateBookFields(editingBook.value.id, {
       title: payload.title,
       author: payload.author,
-      totalPages: payload.totalPages,
-      deadline: payload.deadline
+      totalPages: payload.totalPages
     })
     toast.success('Книга обновлена', 'Изменения сохранены')
     emit('added', editingBook.value.id)
@@ -124,7 +113,6 @@ function submit() {
   close()
 }
 
-const todayStr = todayKey()
 </script>
 
 <template>
@@ -178,7 +166,7 @@ const todayStr = todayKey()
               {{ isEdit ? 'Изменить параметры' : 'Добавить книгу' }}
             </h2>
             <p class="mt-1 text-sm text-ink-500 dark:text-ink-300">
-              План на день будет пересчитываться автоматически на основе дедлайна и прогресса.
+              Книга попадёт в библиотеку. Дедлайн задаётся в целях (сценариях).
             </p>
           </header>
 
@@ -244,21 +232,6 @@ const todayStr = todayKey()
               </div>
             </div>
 
-            <div>
-              <div class="label mb-1.5">Дедлайн <span class="normal-case text-ink-400">(необязательно)</span></div>
-              <input
-                v-model="form.deadline"
-                type="date"
-                class="input tabular-nums"
-                :min="todayStr"
-              />
-              <div v-if="errors.deadline" class="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                {{ errors.deadline }}
-              </div>
-              <div class="mt-1 text-[11px] text-ink-400">
-                Без дедлайна план на день не считается — только трекинг страниц.
-              </div>
-            </div>
           </div>
 
           <footer class="px-5 sm:px-7 py-4 border-t border-ink-200/70 dark:border-ink-700/60 flex items-center justify-end gap-2">

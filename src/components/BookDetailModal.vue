@@ -2,8 +2,9 @@
 import { computed, watch, ref, onBeforeUnmount } from 'vue'
 import { useBooks } from '@/composables/useBooks.js'
 import { useToast } from '@/composables/useToast.js'
-import { pageLabel, dayLabel } from '@/utils/format.js'
-import { parseKey, todayKey } from '@/utils/date.js'
+import { pageLabel } from '@/utils/format.js'
+import { getShelfKey, SHELF_META } from '@/utils/bookShelf.js'
+import { todayKey } from '@/utils/date.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -114,21 +115,10 @@ function openEdit() {
   emit('edit', book.value.id)
 }
 
-const deadlineInfo = computed(() => {
-  if (!book.value?.deadline) return null
-  const date = parseKey(book.value.deadline)
-  if (!date) return null
-  const today = new Date()
-  const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  const days = Math.round((date - t0) / 86400000)
-  return {
-    dateLabel: date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
-    days,
-    overdue: book.value.progress.overdue
-  }
+const shelfLabel = computed(() => {
+  if (!book.value) return ''
+  return SHELF_META[getShelfKey(book.value)]?.title ?? ''
 })
-
-const todayStr = todayKey()
 </script>
 
 <template>
@@ -194,27 +184,8 @@ const todayStr = todayKey()
                 <h2 class="mt-1 font-display text-2xl sm:text-3xl font-bold tracking-tight">
                   {{ book.title }}
                 </h2>
-                <div
-                  v-if="deadlineInfo"
-                  class="mt-1.5 inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full"
-                  :class="deadlineInfo.overdue
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200'
-                    : 'bg-sand-100 text-sand-800 dark:bg-sand-500/15 dark:text-sand-200'"
-                >
-                  <AppIcon name="calendar" :size="12" />
-                  Дедлайн: {{ deadlineInfo.dateLabel }}
-                  <template v-if="deadlineInfo.overdue">
-                    · просрочено
-                  </template>
-                  <template v-else-if="deadlineInfo.days === 0">
-                    · сегодня
-                  </template>
-                  <template v-else>
-                    · через {{ dayLabel(deadlineInfo.days) }}
-                  </template>
-                </div>
-                <div v-else class="mt-1.5 text-xs text-ink-400">
-                  Дедлайн не задан. План на день не считается.
+                <div class="mt-1.5 text-xs text-ink-500 dark:text-ink-300">
+                  Полка: {{ shelfLabel }}
                 </div>
               </div>
             </div>
@@ -238,17 +209,10 @@ const todayStr = todayKey()
               </div>
             </div>
 
-            <div class="mt-4 grid grid-cols-3 gap-2 text-sm">
+            <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
               <div class="rounded-xl bg-ink-50/80 dark:bg-ink-900/40 border border-ink-200/60 dark:border-ink-700/60 px-3 py-2">
                 <div class="label">Сегодня</div>
                 <div class="mt-0.5 font-semibold tabular-nums">+{{ book.progress.todayDelta }}</div>
-              </div>
-              <div class="rounded-xl bg-ink-50/80 dark:bg-ink-900/40 border border-ink-200/60 dark:border-ink-700/60 px-3 py-2">
-                <div class="label">План / день</div>
-                <div class="mt-0.5 font-semibold tabular-nums">
-                  <template v-if="book.progress.dailyPlan != null">{{ book.progress.dailyPlan }}</template>
-                  <template v-else>—</template>
-                </div>
               </div>
               <div class="rounded-xl bg-ink-50/80 dark:bg-ink-900/40 border border-ink-200/60 dark:border-ink-700/60 px-3 py-2">
                 <div class="label">Осталось</div>
@@ -294,31 +258,6 @@ const todayStr = todayKey()
                     <AppIcon name="plus" :size="12" />
                     Добавить
                   </button>
-                </div>
-              </div>
-
-              <div
-                v-if="book.progress.dailyPlan != null"
-                class="mt-4 rounded-xl border border-sand-200/60 bg-sand-50/60 dark:bg-sand-500/[0.06] dark:border-sand-500/30 px-3.5 py-3 text-sm text-ink-700 dark:text-ink-100"
-              >
-                <div class="flex items-center gap-2">
-                  <AppIcon name="target" :size="14" class="text-sand-700 dark:text-sand-300" />
-                  <span>
-                    Сегодня нужно прочитать
-                    <span class="font-semibold">{{ pageLabel(book.progress.dailyPlan) }}</span>
-                  </span>
-                </div>
-                <div v-if="book.progress.todayDelta > 0" class="mt-1 text-xs text-ink-500 dark:text-ink-300">
-                  Уже прочитано {{ pageLabel(book.progress.todayDelta) }}.
-                  <template v-if="book.progress.todayDelta >= book.progress.dailyPlan">
-                    План на сегодня выполнен.
-                  </template>
-                  <template v-else>
-                    Осталось ещё {{ pageLabel(book.progress.dailyPlan - book.progress.todayDelta) }}.
-                  </template>
-                </div>
-                <div class="mt-1 text-[11px] text-ink-400">
-                  План пересчитывается ежедневно из расчёта оставшихся страниц и дней до дедлайна.
                 </div>
               </div>
             </section>

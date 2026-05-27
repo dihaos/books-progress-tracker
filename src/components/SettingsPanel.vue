@@ -83,7 +83,7 @@ function doReset() {
   resetAll()
   clearStorage()
   confirmingReset.value = false
-  toast.info('Все книги и прогресс удалены', 'Сброс')
+  toast.info('Библиотека, цели и прогресс удалены', 'Сброс')
 }
 
 const themeOptions = [

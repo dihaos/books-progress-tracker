@@ -1,6 +1,26 @@
 {
-  "version": 1,
+  "version": 2,
   "exportedAt": "2026-05-13T12:00:00.000Z",
+  "scenarios": [
+    {
+      "id": "scenario-reading-2026",
+      "title": "Прочитать в 2026 — 12 книг",
+      "deadline": "2026-12-31",
+      "bookIds": [
+        "book-01-cuckoos-nest",
+        "book-02-black-obelisk",
+        "book-03-three-men-boat",
+        "book-04-norwegian-wood",
+        "book-05-monte-cristo",
+        "book-06-thousand-suns",
+        "book-07-idiot",
+        "book-08-how-steel-tempered",
+        "book-09-memory",
+        "book-10-financier"
+      ],
+      "createdAt": "2026-05-13T12:00:00.000Z"
+    }
+  ],
   "books": [
     {
       "id": "book-01-cuckoos-nest",
@@ -10,7 +30,6 @@
       "currentPage": 196,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -23,7 +42,6 @@
       "currentPage": 0,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -36,7 +54,6 @@
       "currentPage": 0,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -49,7 +66,6 @@
       "currentPage": 243,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -62,7 +78,6 @@
       "currentPage": 0,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -75,7 +90,6 @@
       "currentPage": 0,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -88,7 +102,6 @@
       "currentPage": 60,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -101,7 +114,6 @@
       "currentPage": 93,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -114,7 +126,6 @@
       "currentPage": 0,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -127,7 +138,6 @@
       "currentPage": 0,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "reading",
       "finishedAt": null,
       "history": {}
@@ -140,7 +150,6 @@
       "currentPage": 280,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "finished",
       "finishedAt": "2026-05-13",
       "history": {}
@@ -153,7 +162,6 @@
       "currentPage": 264,
       "addedAt": "2026-05-13T12:00:00.000Z",
       "startedAt": "2026-05-13",
-      "deadline": "2026-12-31",
       "status": "finished",
       "finishedAt": "2026-05-13",
       "history": {}

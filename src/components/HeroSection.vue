@@ -2,13 +2,16 @@
 import { computed } from 'vue'
 import { useBooks } from '@/composables/useBooks.js'
 import { useStatistics } from '@/composables/useStatistics.js'
+import { useScenarios } from '@/composables/useScenarios.js'
+import { parseKey } from '@/utils/date.js'
 import { pageLabel, bookLabel } from '@/utils/format.js'
 import AppIcon from './AppIcon.vue'
 
 const emit = defineEmits(['add-book'])
 
 const { totalReadAcrossAll, totalPagesAcrossAll, overallPercent, books, finishedCount } = useBooks()
-const { todayPagesRead, streak, nearestDeadline } = useStatistics()
+const { todayPagesRead, streak } = useStatistics()
+const { activeScenario } = useScenarios()
 
 const percent = computed(() =>
   totalPagesAcrossAll.value
@@ -33,9 +36,10 @@ const headline = computed(() => {
 })
 
 const deadlineLabel = computed(() => {
-  const nd = nearestDeadline.value
-  if (!nd) return null
-  return nd.date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+  const d = activeScenario.value?.deadline
+  if (!d) return null
+  const date = parseKey(d)
+  return date?.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 })
 </script>
 
@@ -73,8 +77,7 @@ const deadlineLabel = computed(() => {
             {{ headline }}
           </h1>
           <p class="mt-4 max-w-xl text-base sm:text-lg text-ink-500 dark:text-ink-300 text-balance">
-            Личный трекер чтения. Веди книги, ставь дедлайны, отмечай страницы — план на каждый
-            день пересчитается автоматически.
+            Библиотека без дедлайнов, цели со сценариями — план на день считается по активной цели.
           </p>
 
           <div class="mt-6 flex flex-wrap items-center gap-2">
@@ -82,13 +85,9 @@ const deadlineLabel = computed(() => {
               <AppIcon name="plus" :size="16" />
               Добавить книгу
             </button>
-            <a href="#progress" class="btn-ghost">
-              <AppIcon name="trending" :size="16" />
-              Открыть прогресс
-            </a>
-            <a href="#books" class="btn-ghost">
-              <AppIcon name="library" :size="16" />
-              Все книги
+            <a href="#goals" class="btn-ghost">
+              <AppIcon name="target" :size="16" />
+              Моя цель
             </a>
           </div>
         </div>
@@ -146,7 +145,7 @@ const deadlineLabel = computed(() => {
               class="mt-4 flex items-center gap-2 text-xs text-ink-500 dark:text-ink-300"
             >
               <AppIcon name="calendar" :size="14" />
-              Ближайший дедлайн —
+              Дедлайн цели —
               <span class="font-medium text-ink-700 dark:text-ink-100">{{ deadlineLabel }}</span>
             </div>
           </div>

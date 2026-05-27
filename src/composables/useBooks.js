@@ -13,11 +13,10 @@ import state, {
   totalReadAcrossAll,
   overallPercent,
   pagesReadToday,
-  dailyPlan,
-  isDeadlineOverdue,
   pagesRemaining,
   bookPercent
 } from '@/stores/booksStore.js'
+import { groupBooksByShelf } from '@/utils/bookShelf.js'
 
 function bookProgress(book) {
   const learned = book.currentPage
@@ -30,9 +29,7 @@ function bookProgress(book) {
     isComplete: book.status === 'finished' || learned >= total,
     isInProgress: book.status !== 'finished' && learned > book.startPage && learned < total,
     isNotStarted: book.status !== 'finished' && learned <= book.startPage,
-    todayDelta: pagesReadToday(book),
-    dailyPlan: dailyPlan(book),
-    overdue: isDeadlineOverdue(book)
+    todayDelta: pagesReadToday(book)
   }
 }
 
@@ -44,24 +41,28 @@ export function useBooks() {
     }))
   )
 
+  const shelves = computed(() => groupBooksByShelf(books.value))
+
   const finishedCount = computed(
-    () => state.books.filter((b) => b.status === 'finished').length
+    () => books.value.filter((b) => b.progress.isComplete).length
   )
   const readingCount = computed(
-    () => state.books.filter((b) => b.status === 'reading' && b.currentPage > b.startPage).length
+    () => books.value.filter((b) => b.progress.isInProgress).length
   )
-  const idleCount = computed(
-    () => state.books.filter((b) => b.status === 'reading' && b.currentPage <= b.startPage).length
+  const queueCount = computed(
+    () => books.value.filter((b) => b.progress.isNotStarted && !b.progress.isComplete).length
   )
 
   return {
     books,
+    shelves,
     totalPagesAcrossAll,
     totalReadAcrossAll,
     overallPercent,
     finishedCount,
     readingCount,
-    idleCount,
+    queueCount,
+    idleCount: queueCount,
     addBook,
     updateBookFields,
     setCurrentPage,
