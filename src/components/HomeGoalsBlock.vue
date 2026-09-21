@@ -128,6 +128,9 @@ const shelfSummary = computed(() => {
             </div>
             <div class="rounded-xl bg-ink-50/80 dark:bg-ink-900/40 border border-ink-200/60 dark:border-ink-700/60 px-3 py-2">
               <div class="label">Сегодня</div>
+              <div class="mt-0.5 font-semibold tabular-nums">
+                {{ todayPagesRead }}
+              </div>
             </div>
             <div class="rounded-xl bg-ink-50/80 dark:bg-ink-900/40 border border-ink-200/60 dark:border-ink-700/60 px-3 py-2 col-span-2 sm:col-span-1">
               <div class="label">Книги</div>

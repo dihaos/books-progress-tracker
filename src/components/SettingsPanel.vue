@@ -4,6 +4,7 @@ import { useBooks } from '@/composables/useBooks.js'
 import { useTheme } from '@/composables/useTheme.js'
 import { useToast } from '@/composables/useToast.js'
 import { clearStorage } from '@/stores/booksStore.js'
+import { isSupabaseConfigured } from '@/lib/supabase.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -62,10 +63,10 @@ function handleFile(e) {
   const file = e.target.files?.[0]
   if (!file) return
   const reader = new FileReader()
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const data = JSON.parse(reader.result)
-      importData(data)
+      await importData(data)
       toast.success('Прогресс восстановлен из файла', 'Импорт')
     } catch (err) {
       toast.error(err.message || 'Не удалось прочитать файл', 'Ошибка импорта')
@@ -75,15 +76,19 @@ function handleFile(e) {
   e.target.value = ''
 }
 
-function doReset() {
+async function doReset() {
   if (!confirmingReset.value) {
     confirmingReset.value = true
     return
   }
-  resetAll()
-  clearStorage()
-  confirmingReset.value = false
-  toast.info('Библиотека, цели и прогресс удалены', 'Сброс')
+  try {
+    await resetAll()
+    if (!isSupabaseConfigured) clearStorage()
+    confirmingReset.value = false
+    toast.info('Библиотека, цели и прогресс удалены', 'Сброс')
+  } catch (err) {
+    toast.error(err.message || 'Не удалось выполнить сброс', 'Ошибка')
+  }
 }
 
 const themeOptions = [

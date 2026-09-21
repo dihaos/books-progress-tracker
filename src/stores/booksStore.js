@@ -3,6 +3,13 @@ import { loadJSON, saveJSON, removeKey, storageHasKey } from '@/utils/storage.js
 import { todayKey } from '@/utils/date.js'
 import { uid } from '@/utils/id.js'
 import seedLibrary from '@/data/my-books-2026.json'
+import { isSupabaseConfigured } from '@/lib/supabase.js'
+import {
+  fetchUserData,
+  syncUserData,
+  clearUserData,
+  importUserData as importUserDataRemote
+} from '@/api/dataApi.js'
 
 const BOOKS_KEY = 'books.v1'
 const SCENARIOS_KEY = 'scenarios.v1'
@@ -25,8 +32,14 @@ const state = reactive({
   books: [],
   scenarios: [],
   settings: defaultSettings(),
-  ready: false
+  ready: false,
+  syncEnabled: false,
+  syncing: false,
+  syncError: null
 })
+
+let syncUserId = null
+let syncTimer = null
 
 function normalizeBook(raw) {
   if (!raw || typeof raw !== 'object') return null
@@ -102,7 +115,28 @@ function migrateLegacyFromRawBooks(rawBooks) {
   }
 }
 
-function hydrate() {
+function scheduleSync() {
+  if (!state.syncEnabled || !syncUserId) return
+  clearTimeout(syncTimer)
+  syncTimer = setTimeout(async () => {
+    state.syncing = true
+    state.syncError = null
+    try {
+      await syncUserData(syncUserId, {
+        books: state.books,
+        scenarios: state.scenarios,
+        settings: state.settings
+      })
+    } catch (err) {
+      console.error('[sync] failed', err)
+      state.syncError = err.message || 'Не удалось сохранить данные'
+    } finally {
+      state.syncing = false
+    }
+  }, 500)
+}
+
+function hydrateLocal() {
   const rawBooks = loadJSON(BOOKS_KEY, null)
   const persistedScenarios = loadJSON(SCENARIOS_KEY, null)
 
@@ -150,11 +184,75 @@ function hydrate() {
   state.ready = true
 }
 
-hydrate()
+export async function hydrateFromServer(userId) {
+  state.ready = false
+  state.syncError = null
+  try {
+    const data = await fetchUserData(userId, defaultSettings())
+    state.books = data.books.map(normalizeBook).filter(Boolean)
+    state.scenarios = data.scenarios.map(normalizeScenario).filter(Boolean)
+    state.settings = { ...defaultSettings(), ...data.settings }
 
-watch(() => state.books, (val) => saveJSON(BOOKS_KEY, val), { deep: true })
-watch(() => state.scenarios, (val) => saveJSON(SCENARIOS_KEY, val), { deep: true })
-watch(() => state.settings, (val) => saveJSON(SETTINGS_KEY, val), { deep: true })
+    if (
+      state.settings.activeScenarioId &&
+      !state.scenarios.some((s) => s.id === state.settings.activeScenarioId)
+    ) {
+      state.settings.activeScenarioId = state.scenarios[0]?.id || null
+    }
+    if (!state.settings.activeScenarioId && state.scenarios.length) {
+      state.settings.activeScenarioId = state.scenarios[0].id
+    }
+
+    syncUserId = userId
+    state.syncEnabled = true
+  } catch (err) {
+    console.error('[hydrate] failed', err)
+    state.syncError = err.message || 'Не удалось загрузить данные'
+    throw err
+  } finally {
+    state.ready = true
+  }
+}
+
+export function disableCloudSync() {
+  clearTimeout(syncTimer)
+  syncTimer = null
+  syncUserId = null
+  state.syncEnabled = false
+  state.syncing = false
+  state.syncError = null
+}
+
+if (!isSupabaseConfigured) {
+  hydrateLocal()
+} else {
+  state.ready = false
+}
+
+watch(
+  () => state.books,
+  (val) => {
+    if (state.syncEnabled) scheduleSync()
+    else saveJSON(BOOKS_KEY, val)
+  },
+  { deep: true }
+)
+watch(
+  () => state.scenarios,
+  (val) => {
+    if (state.syncEnabled) scheduleSync()
+    else saveJSON(SCENARIOS_KEY, val)
+  },
+  { deep: true }
+)
+watch(
+  () => state.settings,
+  (val) => {
+    if (state.syncEnabled) scheduleSync()
+    else saveJSON(SETTINGS_KEY, val)
+  },
+  { deep: true }
+)
 
 // ---------- Scenario helpers ----------
 
@@ -414,10 +512,14 @@ export function removeBookFromScenario(scenarioId, bookId) {
   return true
 }
 
-export function resetAll() {
+export async function resetAll() {
   state.books = []
   state.scenarios = []
   state.settings.activeScenarioId = null
+
+  if (state.syncEnabled && syncUserId) {
+    await clearUserData(syncUserId)
+  }
 }
 
 export function exportData() {
@@ -430,23 +532,60 @@ export function exportData() {
   }
 }
 
-export function importData(payload) {
+export async function importData(payload) {
   if (!payload || typeof payload !== 'object') {
     throw new Error('Некорректный файл прогресса')
   }
   if (!Array.isArray(payload.books)) {
     throw new Error('Файл не содержит данных о книгах')
   }
-  state.books = payload.books.map(normalizeBook).filter(Boolean)
-  state.scenarios = Array.isArray(payload.scenarios)
+
+  const normalizedBooks = payload.books.map(normalizeBook).filter(Boolean)
+  let normalizedScenarios = Array.isArray(payload.scenarios)
     ? payload.scenarios.map(normalizeScenario).filter(Boolean)
     : []
-  if (!state.scenarios.length) {
-    migrateLegacyFromRawBooks(payload.books)
+
+  if (!normalizedScenarios.length) {
+    const legacyScenarios = []
+    const deadline = payload.books.find((b) => b.deadline)?.deadline || '2026-12-31'
+    const bookIds = payload.books
+      .filter((b) => b.status !== 'finished')
+      .map((b) => String(b.id))
+      .filter(Boolean)
+    if (bookIds.length) {
+      legacyScenarios.push(
+        normalizeScenario({
+          id: 'scenario-reading-2026',
+          title: 'Прочитать в 2026',
+          deadline,
+          bookIds,
+          createdAt: new Date().toISOString()
+        })
+      )
+    }
+    normalizedScenarios = legacyScenarios
   }
-  if (payload.settings && typeof payload.settings === 'object') {
-    state.settings = { ...defaultSettings(), ...payload.settings }
+
+  const nextSettings =
+    payload.settings && typeof payload.settings === 'object'
+      ? { ...defaultSettings(), ...payload.settings }
+      : defaultSettings()
+
+  if (state.syncEnabled && syncUserId) {
+    const data = await importUserDataRemote(syncUserId, {
+      books: normalizedBooks,
+      scenarios: normalizedScenarios,
+      settings: nextSettings
+    }, defaultSettings())
+    state.books = data.books.map(normalizeBook).filter(Boolean)
+    state.scenarios = data.scenarios.map(normalizeScenario).filter(Boolean)
+    state.settings = { ...defaultSettings(), ...data.settings }
+    return
   }
+
+  state.books = normalizedBooks
+  state.scenarios = normalizedScenarios
+  state.settings = nextSettings
 }
 
 export function clearStorage() {

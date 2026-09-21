@@ -7,10 +7,11 @@ import { roundPct } from '@/utils/format.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
-  view: { type: String, default: 'home' }
+  view: { type: String, default: 'home' },
+  syncing: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['navigate', 'open-settings', 'add-book'])
+const emit = defineEmits(['navigate', 'open-settings', 'add-book', 'sign-out'])
 
 const { isDark, cycle } = useTheme()
 const { activeScenarioStats } = useScenarios()
@@ -99,7 +100,23 @@ const navItems = [
           <button type="button" class="btn-soft h-9 w-9 p-0 sm:w-auto sm:px-3" @click="emit('open-settings')">
             <AppIcon name="menu" :size="16" />
           </button>
+
+          <button
+            type="button"
+            class="btn-ghost h-9 w-9 p-0"
+            title="Выйти"
+            @click="emit('sign-out')"
+          >
+            <AppIcon name="close" :size="16" />
+          </button>
         </div>
+      </div>
+
+      <div
+        v-if="syncing"
+        class="pb-2 text-[11px] text-center text-ink-400"
+      >
+        Сохранение…
       </div>
 
       <nav class="md:hidden flex gap-1 pb-2 -mt-1 overflow-x-auto scroll-soft">
