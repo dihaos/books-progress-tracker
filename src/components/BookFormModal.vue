@@ -2,6 +2,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useBooks } from '@/composables/useBooks.js'
 import { useToast } from '@/composables/useToast.js'
+import { searchBooksByTitle } from '@/api/bookSearchApi.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -24,6 +25,89 @@ const form = ref({
   totalPages: '',
   currentPage: '',
 })
+
+const suggestions = ref([])
+const isSearching = ref(false)
+const searchFailed = ref(false)
+const titleFocused = ref(false)
+const activeSuggestion = ref(-1)
+let searchTimer
+let searchController
+let skipNextSearch = false
+
+const showSuggestions = computed(() =>
+  titleFocused.value && form.value.title.trim().length >= 2
+)
+
+watch(
+  () => form.value.title,
+  (title) => {
+    clearTimeout(searchTimer)
+    searchController?.abort()
+    activeSuggestion.value = -1
+    searchFailed.value = false
+
+    if (skipNextSearch) {
+      skipNextSearch = false
+      return
+    }
+
+    if (!props.open || title.trim().length < 2) {
+      suggestions.value = []
+      isSearching.value = false
+      return
+    }
+
+    isSearching.value = true
+    searchTimer = setTimeout(async () => {
+      const controller = new AbortController()
+      searchController = controller
+      try {
+        suggestions.value = await searchBooksByTitle(title, {
+          signal: controller.signal
+        })
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          suggestions.value = []
+          searchFailed.value = true
+        }
+      } finally {
+        if (searchController === controller && !controller.signal.aborted) {
+          isSearching.value = false
+        }
+      }
+    }, 350)
+  }
+)
+
+function selectSuggestion(book) {
+  clearTimeout(searchTimer)
+  searchController?.abort()
+  isSearching.value = false
+  skipNextSearch = true
+  form.value.title = book.title
+  form.value.author = book.author
+  suggestions.value = []
+  titleFocused.value = false
+  activeSuggestion.value = -1
+}
+
+function onTitleKeydown(event) {
+  if (!showSuggestions.value || !suggestions.value.length) return
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    activeSuggestion.value = (activeSuggestion.value + 1) % suggestions.value.length
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    activeSuggestion.value = activeSuggestion.value <= 0
+      ? suggestions.value.length - 1
+      : activeSuggestion.value - 1
+  } else if (event.key === 'Enter' && activeSuggestion.value >= 0) {
+    event.preventDefault()
+    selectSuggestion(suggestions.value[activeSuggestion.value])
+  }
+}
 
 function resetForm() {
   if (editingBook.value) {
@@ -49,6 +133,8 @@ watch(
   (open) => {
     if (open) {
       resetForm()
+      suggestions.value = []
+      searchFailed.value = false
       document.addEventListener('keydown', onKey)
       document.body.style.overflow = 'hidden'
     } else {
@@ -63,6 +149,8 @@ function onKey(e) {
 }
 
 onBeforeUnmount(() => {
+  clearTimeout(searchTimer)
+  searchController?.abort()
   document.removeEventListener('keydown', onKey)
   document.body.style.overflow = ''
 })
@@ -171,7 +259,7 @@ function submit() {
           </header>
 
           <div class="px-5 sm:px-7 py-5 space-y-4 max-h-[70vh] overflow-y-auto scroll-soft">
-            <div>
+            <div class="relative">
               <div class="label mb-1.5">Название</div>
               <input
                 v-model="form.title"
@@ -180,9 +268,51 @@ function submit() {
                 placeholder="Например, «Война и мир»"
                 autocomplete="off"
                 autofocus
+                role="combobox"
+                aria-autocomplete="list"
+                :aria-expanded="showSuggestions"
+                aria-controls="book-title-suggestions"
+                :aria-activedescendant="activeSuggestion >= 0 ? `book-suggestion-${activeSuggestion}` : undefined"
+                @focus="titleFocused = true"
+                @blur="titleFocused = false"
+                @keydown="onTitleKeydown"
               />
               <div v-if="errors.title" class="mt-1 text-xs text-amber-700 dark:text-amber-300">
                 {{ errors.title }}
+              </div>
+              <div
+                v-if="showSuggestions"
+                id="book-title-suggestions"
+                role="listbox"
+                class="absolute z-20 mt-1.5 w-full overflow-hidden rounded-xl border border-ink-200/80 bg-white shadow-card dark:border-ink-700 dark:bg-ink-800"
+              >
+                <div v-if="isSearching" class="px-4 py-3 text-sm text-ink-500 dark:text-ink-300">
+                  Ищем книги…
+                </div>
+                <button
+                  v-for="(book, index) in suggestions"
+                  v-else
+                  :id="`book-suggestion-${index}`"
+                  :key="book.id"
+                  type="button"
+                  role="option"
+                  :aria-selected="index === activeSuggestion"
+                  class="block w-full px-4 py-2.5 text-left transition-colors hover:bg-sand-100 dark:hover:bg-ink-700"
+                  :class="index === activeSuggestion ? 'bg-sand-100 dark:bg-ink-700' : ''"
+                  @mousedown.prevent="selectSuggestion(book)"
+                  @mouseenter="activeSuggestion = index"
+                >
+                  <span class="block text-sm font-medium text-ink-900 dark:text-ink-50">{{ book.title }}</span>
+                  <span class="mt-0.5 block text-xs text-ink-500 dark:text-ink-300">
+                    {{ book.author || 'Автор не указан' }}
+                  </span>
+                </button>
+                <div
+                  v-if="!isSearching && !suggestions.length"
+                  class="px-4 py-3 text-sm text-ink-500 dark:text-ink-300"
+                >
+                  {{ searchFailed ? 'Не удалось загрузить подсказки. Можно ввести вручную.' : 'Подходящих книг не найдено' }}
+                </div>
               </div>
             </div>
 
