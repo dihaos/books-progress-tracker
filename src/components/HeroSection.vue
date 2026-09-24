@@ -116,8 +116,7 @@ const deadlineLabel = computed(() => {
 
             <div class="mt-5 h-2 rounded-full bg-ink-200/70 dark:bg-ink-700/70 overflow-hidden">
               <div
-                class="relative h-full rounded-full bg-gradient-to-r from-sand-500 via-cocoa-500 to-sand-400
-                       transition-[width] duration-700 ease-out progress-shine"
+                class="relative h-full rounded-full bg-gradient-to-r from-sand-500 via-cocoa-500 to-sand-400"
                 :style="{ width: overallPercent + '%' }"
               />
             </div>
