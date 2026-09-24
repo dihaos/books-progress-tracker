@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: npm
@@ -43,7 +43,24 @@ jobs:
         run: test -f dist/index.html
 
       - name: Install FTPS client
-        run: sudo apt-get update && sudo apt-get install --yes lftp
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes lftp
+
+      # REG.RU's FTP endpoint currently omits the GlobalSign intermediate
+      # certificate. Supply that public CA explicitly while keeping strict TLS
+      # verification enabled.
+      - name: Prepare REG.RU certificate chain
+        run: |
+          curl --fail --silent --show-error \
+            --output /tmp/globalsign-alphassl-2025.crt \
+            https://secure.globalsign.com/cacert/gsgccr6alphasslca2025.crt
+          openssl x509 \
+            -inform DER \
+            -in /tmp/globalsign-alphassl-2025.crt \
+            -out /tmp/globalsign-alphassl-2025.pem
+          cp /tmp/globalsign-alphassl-2025.pem /tmp/reg-ru-ca-bundle.pem
+          sed -n '1,$p' /etc/ssl/certs/ca-certificates.crt >> /tmp/reg-ru-ca-bundle.pem
 
       - name: Deploy dist to REG.RU
         env:
@@ -63,6 +80,7 @@ jobs:
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
             set ssl:verify-certificate true;
+            set ssl:ca-file /tmp/reg-ru-ca-bundle.pem;
             open -u \"$REG_RU_FTP_USERNAME\",\"$REG_RU_FTP_PASSWORD\" \"$REG_RU_FTP_HOST\";
             mirror --reverse --verbose --parallel=4 dist/ \"$REG_RU_FTP_PATH\";
             bye;
