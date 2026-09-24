@@ -1,0 +1,69 @@
+name: Deploy to REG.RU
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-reg-ru
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://books.dihaos.ru
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        env:
+          VITE_BASE_PATH: /
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          : "${VITE_SUPABASE_URL:?Missing VITE_SUPABASE_URL secret}"
+          : "${VITE_SUPABASE_ANON_KEY:?Missing VITE_SUPABASE_ANON_KEY secret}"
+          npm run build
+
+      - name: Verify build
+        run: test -f dist/index.html
+
+      - name: Install FTPS client
+        run: sudo apt-get update && sudo apt-get install --yes lftp
+
+      - name: Deploy dist to REG.RU
+        env:
+          REG_RU_FTP_HOST: ${{ secrets.REG_RU_FTP_HOST }}
+          REG_RU_FTP_USERNAME: ${{ secrets.REG_RU_FTP_USERNAME }}
+          REG_RU_FTP_PASSWORD: ${{ secrets.REG_RU_FTP_PASSWORD }}
+          REG_RU_FTP_PATH: ${{ secrets.REG_RU_FTP_PATH }}
+        run: |
+          : "${REG_RU_FTP_HOST:?Missing REG_RU_FTP_HOST secret}"
+          : "${REG_RU_FTP_USERNAME:?Missing REG_RU_FTP_USERNAME secret}"
+          : "${REG_RU_FTP_PASSWORD:?Missing REG_RU_FTP_PASSWORD secret}"
+          : "${REG_RU_FTP_PATH:?Missing REG_RU_FTP_PATH secret}"
+          lftp -c "
+            set cmd:fail-exit true;
+            set net:max-retries 2;
+            set net:timeout 20;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate true;
+            open -u \"$REG_RU_FTP_USERNAME\",\"$REG_RU_FTP_PASSWORD\" \"$REG_RU_FTP_HOST\";
+            mirror --reverse --verbose --parallel=4 dist/ \"$REG_RU_FTP_PATH\";
+            bye;
+          "
